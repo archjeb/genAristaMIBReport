@@ -21,8 +21,9 @@
 ########################################
 # Dependencies
 # -----------
-# This requires BeautifulSoup and mibdump tool from http://snmplabs.com/pysmi/mibdump.html
-#
+# This requires BeautifulSoup and pysmi.
+#   pip install beautifulsoup
+#   pip install pysmi
 ########################################
 # Change log
 # ==========
@@ -42,6 +43,16 @@ import csv
 import argparse
 import sys
 
+# Check to make sure pysmi is Installed
+import imp
+try:
+    imp.find_module('pysmi')
+    found = True
+except ImportError:
+    found = False
+if found == False:
+    print 'Failed to load pysmi, please install from pip.'
+    exit()
 #######################################################
 # Global Variables
 #######################################################
