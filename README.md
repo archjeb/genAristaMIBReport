@@ -46,4 +46,4 @@ optional arguments:
 
 License
 =======
-BSD-3, See LICENSE file
+MIT, See LICENSE file
