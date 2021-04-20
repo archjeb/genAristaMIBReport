@@ -21,14 +21,19 @@
 ########################################
 # Dependencies
 # -----------
-# This requires BeautifulSoup and pysmi.
+# This requires BeautifulSoup4 and pysmi.
 #   pip install beautifulsoup
 #   pip install pysmi
+#   
+#  Also requires curl
 ########################################
 # Change log
 # ==========
 # 4-19-2019 --  Version 1.0  -- Jeremy Georges -- Initial Script
 # 4-20-2019 --  Version 1.1  -- Jeremy Georges -- Added CLI arguments for options
+# 9-2-2020  --  version 1.2  -- Jeremy Georges -- Changes to support Python 3. Pull Mibs from simpleweb.org
+# 4-20-2021 --  version 1.3  -- Jeremy Georges -- Updated IETF MIB listed required for newer EOS versions 
+#                                               - Also added IANA MIB List needed for these newer versions
 #
 ########################################
 
@@ -51,22 +56,30 @@ try:
 except ImportError:
     found = False
 if found == False:
-    print 'Failed to load pysmi, please install from pip.'
+    print ('Failed to load pysmi, please install from pip.')
     exit()
 #######################################################
 # Global Variables
 #######################################################
 
-VERSION='1.1'
+VERSION='1.3'
+
 
 # Unfortunately, the files available out there are based on whether its IEFT or IEEE,etc. So we'll make a couple of lists dependant on source.
-IETFFILES=['MAU-MIB','IF-MIB','Q-BRIDGE-MIB','RMON-MIB','RMON2-MIB','HC-RMON-MIB','EtherLike-MIB','SNMPv2-MIB','IF-INVERTED-STACK-MIB','IP-FORWARD-MIB','BRIDGE-MIB','UDP-MIB','TCP-MIB','IP-MIB','VRRP-MIB','IPMROUTE-STD-MIB','IGMP-STD-MIB','PIM-MIB','HOST-RESOURCES-MIB','ENTITY-MIB','ENTITY-SENSOR-MIB','ENTITY-STATE-MIB','MSDP-MIB','OSPF-MIB','BGP4-MIB','SNMP-TLS-TM-MIB','SNMP-TSM-MIB']
+IETFFILES=['P-BRIDGE-MIB', 'RFC1213-MIB','RFC-1212', 'RFC1155-SMI', 'RFC1271-MIB','INET-ADDRESS-MIB','TOKEN-RING-RMON-MIB',\
+'SNMP-FRAMEWORK-MIB','SNMPv2-CONF','SNMPv2-TC','ENTITY-STATE-TC-MIB','SNMPv2-SMI','MAU-MIB','IF-MIB','Q-BRIDGE-MIB','RMON-MIB','RMON2-MIB',\
+'HC-RMON-MIB','EtherLike-MIB','SNMPv2-MIB','IF-INVERTED-STACK-MIB','IP-FORWARD-MIB','BRIDGE-MIB','UDP-MIB','TCP-MIB','IP-MIB','VRRP-MIB',\
+'IPMROUTE-STD-MIB','IGMP-STD-MIB','PIM-MIB','HOST-RESOURCES-MIB','ENTITY-MIB','ENTITY-SENSOR-MIB','ENTITY-STATE-MIB','MSDP-MIB',\
+'OSPF-MIB','BGP4-MIB','SNMP-TLS-TM-MIB','SNMP-TSM-MIB']
 
 # IEEEFILES=['LLDP-MIB','LLDP-EXT-DOT1-MIB','LLDP-EXT-DOT3-MIB','IEEE8021-PFC-MIB-201806210000Z.txt']
-IEEEFILES=['lldp.mib','lldp_dot1.mib','lldp_dot3.mib','IEEE8021-PFC-MIB-201806210000Z.txt']
+IEEEFILES=['lldp.mib','lldp_dot1.mib','lldp_dot3.mib','IEEE8021-PFC-MIB-201412150000Z.mib']
+IANAFILES=['IANA-MAU-MIB','IANAifType-MIB']
 
 IEEEURL="http://www.ieee802.org/1/files/public/MIBs/"
 IETFURL="https://www.simpleweb.org/ietf/mibs/modules/IETF/txt/"
+IANAURL="https://www.simpleweb.org/ietf/mibs/modules/IANA/txt/"
+
 
 #######################################################
 # Functions
@@ -116,17 +129,23 @@ def getArista():
         os.system('curl -s -O %s' % (MIBURLPREFIX+x))
 
 def getOthers():
-    print "Downloading IETF MIB Files..."
+    print ("Downloading IETF MIB Files...")
     for x in IETFFILES:
         FILENAME=x+'.txt'
         print ("Downloading file %s" % FILENAME)
         os.system("curl %s -s -o %s" % (IETFURL+str(x),FILENAME))
 
-    print "Downloading IEEE MIB Files..."
+    print ("Downloading IEEE MIB Files...")
     for x in IEEEFILES:
         FILENAME=x+'.txt'
         print ("Downloading file %s" % FILENAME)
         os.system("curl %s -s -o %s" % (IEEEURL+str(x),FILENAME))
+
+    print ("Downloading IANA MIB Files...")
+    for x in IANAFILES:
+        FILENAME=x+'.txt'
+        print ("Downloading file %s" % FILENAME)
+        os.system("curl %s -s -o %s" % (IANAURL+str(x),FILENAME))
 
 def genJSON():
     # Get our MIB files as a list to walk through
@@ -145,7 +164,8 @@ def genJSON():
         # Need multiple sources including the local working director
         # FULLCLI='mibdump.py --mib-source=file:///usr/share/snmp --mib-source=%s --mib-source=http://mibs.snmplabs.com/asn1/@mib@ ' % CWD
         # Switched order here...use remote instead of local.
-        FULLCLI = 'mibdump.py --mib-source=file:///usr/share/snmp --mib-source=http://mibs.snmplabs.com/asn1/@mib@ --mib-source=%s  ' % CWD
+        #FULLCLI = 'mibdump.py --mib-source=file:///usr/share/snmp --mib-source=http://mibs.snmplabs.com/asn1/@mib@ --mib-source=%s  ' % CWD
+        FULLCLI = 'mibdump.py --mib-source=/usr/share/snmp --mib-source=%s  ' % CWD
         FULLCLI += '--generate-mib-texts --destination-format json %s' % str(x)
         try:
                     subprocess.check_output(FULLCLI, shell=True)
@@ -154,14 +174,14 @@ def genJSON():
         else:
             SUCCESSLIST.append(x)
 
-    print " "
+    print (" ")
     print ("Successfully Compiled MIBs:")
     print ("-------------------------")
     if len(SUCCESSLIST) == 0:
         print ("None")
     else:
         for x in SUCCESSLIST:
-            print x
+            print (x)
     print ("\n\r")
 
     print ("Failed Compiling MIBs:")
@@ -170,7 +190,7 @@ def genJSON():
         print ("None")
     else:
         for x in FAILEDLIST:
-            print x
+            print (x)
     print ("\n\r")
 
 
